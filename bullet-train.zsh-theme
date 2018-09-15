@@ -135,7 +135,7 @@ if [ ! -n "${BULLETTRAIN_GO_BG+1}" ]; then
   BULLETTRAIN_GO_BG=cyan
 fi
 if [ ! -n "${BULLETTRAIN_GO_FG+1}" ]; then
-  BULLETTRAIN_GO_FG=white
+  BULLETTRAIN_GO_FG=black
 fi
 if [ ! -n "${BULLETTRAIN_GO_PREFIX+1}" ]; then
   BULLETTRAIN_GO_PREFIX="go"
