@@ -14,6 +14,7 @@
 # ------------------------------------------------------------------------------
 
 VIRTUAL_ENV_DISABLE_PROMPT=true
+RUBY_DISABLE_PROMPT=true
 
 # Define order and content of prompt
 if [ ! -n "${BULLETTRAIN_PROMPT_ORDER+1}" ]; then
@@ -90,7 +91,7 @@ if [ ! -n "${BULLETTRAIN_VIRTUALENV_BG+1}" ]; then
   BULLETTRAIN_VIRTUALENV_BG=yellow
 fi
 if [ ! -n "${BULLETTRAIN_VIRTUALENV_FG+1}" ]; then
-  BULLETTRAIN_VIRTUALENV_FG=white
+  BULLETTRAIN_VIRTUALENV_FG=black
 fi
 if [ ! -n "${BULLETTRAIN_VIRTUALENV_PREFIX+1}" ]; then
   BULLETTRAIN_VIRTUALENV_PREFIX=🐍
@@ -499,19 +500,21 @@ prompt_dir() {
 # RBENV: shows current ruby version active in the shell; also with non-global gemsets if any is active
 # CHRUBY: shows current ruby version active in the shell
 prompt_ruby() {
-  if command -v rvm-prompt > /dev/null 2>&1; then
-    prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rvm-prompt i v g)"
-  elif command -v chruby > /dev/null 2>&1; then
-    prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX"  $(chruby | sed -n -e 's/ \* //p')"
-  elif command -v rbenv > /dev/null 2>&1; then
-    current_gemset() {
-      echo "$(rbenv gemset active 2&>/dev/null | sed -e 's/ global$//')"
-    }
+  if [[ $RUBY_DISABLE_PROMPT != true ]]; then
+    if command -v rvm-prompt > /dev/null 2>&1; then
+      prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rvm-prompt i v g)"
+    elif command -v chruby > /dev/null 2>&1; then
+      prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX"  $(chruby | sed -n -e 's/ \* //p')"
+    elif command -v rbenv > /dev/null 2>&1; then
+      current_gemset() {
+        echo "$(rbenv gemset active 2&>/dev/null | sed -e 's/ global$//')"
+      }
 
-    if [[ -n $(current_gemset) ]]; then
-      prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rbenv version | sed -e 's/ (set.*$//')"@"$(current_gemset)"
-    else
-      prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rbenv version | sed -e 's/ (set.*$//')"
+      if [[ -n $(current_gemset) ]]; then
+        prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rbenv version | sed -e 's/ (set.*$//')"@"$(current_gemset)"
+      else
+        prompt_segment $BULLETTRAIN_RUBY_BG $BULLETTRAIN_RUBY_FG $BULLETTRAIN_RUBY_PREFIX" $(rbenv version | sed -e 's/ (set.*$//')"
+      fi
     fi
   fi
 }
@@ -564,27 +567,34 @@ prompt_kctx() {
 
 # Virtualenv: current working virtualenv
 prompt_virtualenv() {
-  local virtualenv_path="$VIRTUAL_ENV"
-  if [[ -n $virtualenv_path && -n $VIRTUAL_ENV_DISABLE_PROMPT ]]; then
-    prompt_segment $BULLETTRAIN_VIRTUALENV_BG $BULLETTRAIN_VIRTUALENV_FG $BULLETTRAIN_VIRTUALENV_PREFIX" $(basename $virtualenv_path)"
-  elif which pyenv &> /dev/null; then
-    prompt_segment $BULLETTRAIN_VIRTUALENV_BG $BULLETTRAIN_VIRTUALENV_FG $BULLETTRAIN_VIRTUALENV_PREFIX" $(pyenv version | sed -e 's/ (set.*$//' | tr '\n' ' ' | sed 's/.$//')"
+  if [[ -n $VIRTUAL_ENV_DISABLE_PROMPT ]]; then
+    local virtualenv_path="$VIRTUAL_ENV"
+    if [[ -n $CONDA_DEFAULT_ENV ]]; then
+      prompt_segment $BULLETTRAIN_VIRTUALENV_BG $BULLETTRAIN_VIRTUALENV_FG $BULLETTRAIN_VIRTUALENV_PREFIX" $CONDA_DEFAULT_ENV"
+    elif [[ -n $virtualenv_path ]]; then
+      prompt_segment $BULLETTRAIN_VIRTUALENV_BG $BULLETTRAIN_VIRTUALENV_FG $BULLETTRAIN_VIRTUALENV_PREFIX" $(basename $virtualenv_path)"
+    elif which pyenv &> /dev/null; then
+      prompt_segment $BULLETTRAIN_VIRTUALENV_BG $BULLETTRAIN_VIRTUALENV_FG $BULLETTRAIN_VIRTUALENV_PREFIX" $(pyenv version | sed -e 's/ (set.*$//' | tr '\n' ' ' | sed 's/.$//')"
+    fi
   fi
 }
 
+
 # NVM: Node version manager
 prompt_nvm() {
-  local nvm_prompt
-  if type nvm >/dev/null 2>&1; then
-    nvm_prompt=$(nvm current 2>/dev/null)
-    [[ "${nvm_prompt}x" == "x" ]] && return
-  elif type node >/dev/null 2>&1; then
-    nvm_prompt="$(node --version)"
-  else
-    return
+  if [ -f ./package.json ]; then
+    local nvm_prompt
+    if type nvm >/dev/null 2>&1; then
+      nvm_prompt=$(nvm current 2>/dev/null)
+      [[ "${nvm_prompt}x" == "x" ]] && return
+    elif type node >/dev/null 2>&1; then
+      nvm_prompt="$(node --version)"
+    else
+      return
+    fi
+    nvm_prompt=${nvm_prompt}
+    prompt_segment $BULLETTRAIN_NVM_BG $BULLETTRAIN_NVM_FG $BULLETTRAIN_NVM_PREFIX$nvm_prompt
   fi
-  nvm_prompt=${nvm_prompt}
-  prompt_segment $BULLETTRAIN_NVM_BG $BULLETTRAIN_NVM_FG $BULLETTRAIN_NVM_PREFIX$nvm_prompt
 }
 
 #AWS Profile
